@@ -8,7 +8,7 @@ Processing scripts for StackOverflow data dump
 pip install git+https://github.com/isofew/sodata
 ```
 
-### Usage
+## Usage
 
 Download the 7z data dumps starting with "stackoverflow.com-" from [here](https://archive.org/details/stackexchange).
 
