@@ -1,18 +1,10 @@
 from pyspark.sql import functions as F
 from pyspark.sql.window import Window
-from pyspark.sql import SparkSession
+from . import get_spark
 
 # Join posts, users and vote counts per type
 def join_puv(data_dir, mem=16, cores=8, verbose=True):
-    spark = (
-        SparkSession
-        .builder
-        .config('spark.driver.memory', f'{mem}g') 
-        .config('spark.sql.session.timeZone', 'UTC')
-        .appName('join_puv')
-        .master(f'local[{cores}]')
-        .getOrCreate()
-    )
+    spark = get_spark('join_puv', mem=mem, cores=cores)
 
     if verbose:
         print('loading users')
@@ -57,7 +49,7 @@ def join_puv(data_dir, mem=16, cores=8, verbose=True):
     if verbose:
         print('joining posts with users and vote counts on posts')
 
-    pufv = (
+    puv = (
         posts
         .join(users, F.col('PostOwnerUserId') == F.col('UserId'), 'left')
         .join(votes, F.col('PostId') == F.col('VotePostId'), 'left')
@@ -66,7 +58,7 @@ def join_puv(data_dir, mem=16, cores=8, verbose=True):
     if verbose:
         print('adding feature columns: timestamp, weekday and time to next post')
 
-    pufv = pufv.withColumn(
+    puv = puv.withColumn(
         'PostCreationTime',
         F.unix_timestamp(
             'PostCreationDate',
@@ -74,7 +66,7 @@ def join_puv(data_dir, mem=16, cores=8, verbose=True):
         )
     )
 
-    pufv = pufv.withColumn(
+    puv = puv.withColumn(
         'PostCreationWeekDay',
         F.dayofweek('PostCreationDate')
     )
@@ -86,7 +78,7 @@ def join_puv(data_dir, mem=16, cores=8, verbose=True):
         .rowsBetween(-1, 0)
     )
 
-    pufv = pufv.withColumn(
+    puv = puv.withColumn(
         'PostTimeSincePrev',
         (  F.max('PostCreationTime').over(wnd)
          - F.min('PostCreationTime').over(wnd) )
@@ -99,7 +91,7 @@ def join_puv(data_dir, mem=16, cores=8, verbose=True):
         .rowsBetween(0, 1)
     )
 
-    pufv = pufv.withColumn(
+    puv = puv.withColumn(
         'PostTimeSincePrevSameType',
         (  F.max('PostCreationTime').over(stwnd)
          - F.min('PostCreationTime').over(stwnd) )
@@ -108,4 +100,6 @@ def join_puv(data_dir, mem=16, cores=8, verbose=True):
     if verbose:
         print('writing results')
 
-    pufv.write.format('json').save(f'{data_dir}/pufv.json')
+    puv.write.format('json').save(f'{data_dir}/puv.json')
+
+    spark.stop()
