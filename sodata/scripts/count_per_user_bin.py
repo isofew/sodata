@@ -7,7 +7,7 @@ def count_per_user_bin(
     mem=16, cores=8, verbose=True,
     post_filter='PostTypeId = 2',
     user_filter='UserReputation > 50000',
-    vote_filter='VoteTypeId = 1 or VoteTypeId = 2 or VoteTypeId = 3',
+    vote_filter='isNull(VoteTypeId) or VoteTypeId = 1 or VoteTypeId = 2 or VoteTypeId = 3',
     bin_unit='day', allow_same_bin_vote=True,
 ):
     if verbose:

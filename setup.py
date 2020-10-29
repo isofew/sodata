@@ -17,5 +17,7 @@ setup(
         "numpy>=1.18.0",
         "pandas>=0.25.0",
         "matplotlib>=3.3.0",
+        "seaborn>=0.11.0",
+        "requests>=2.24.0",
     ],
 )
