@@ -52,10 +52,10 @@ def event_windows(dfp, dfv, offset):
 
 def event_plots(
     data_dir, output_filename, figsize, verbose=True,
-    vote_type_ids=[1,2,3,'lvup'], n_samples=5, seed=0, bin_unit='day'
+    no_mix=False, vote_type_ids=[1,2,3,'lvup'], n_samples=5, seed=0, bin_unit='day'
 ):
     if verbose:
-        print('[event_plots] config', dict(vote_type_ids=vote_type_ids, n_samples=n_samples, seed=seed, bin_unit=bin_unit))
+        print('[event_plots] config', dict(no_mix=no_mix, vote_type_ids=vote_type_ids, n_samples=n_samples, seed=seed, bin_unit=bin_unit))
     
     spark = sodata.scripts.get_spark('event_plots', mem=4, cores=2)
     
@@ -85,6 +85,13 @@ def event_plots(
                 dfv_ = level_up_votes(dfv[dfv.UserId == user_id])
             else:
                 dfv_ = dfv[(dfv.UserId == user_id) & (dfv.VoteTypeId == vote_type_id)].reset_index()
+                if no_mix and vote_type_id in [2,3]:
+                    if vote_type_id == 2:
+                        dfv_other = dfv[(dfv.UserId == user_id) & (dfv.VoteTypeId == 3)].reset_index()
+                    elif vote_type_id == 3:
+                        dfv_other = dfv[(dfv.UserId == user_id) & (dfv.VoteTypeId == 2)].reset_index()
+                    common_bin = set(dfv_.VoteCreationBin.unique()) & set(dfv_other.VoteCreationBin.unique())
+                    dfv_ = dfv_[dfv_.VoteCreationBin.map(lambda b: b not in common_bin)].reset_index()
             wnd = event_windows(dfp_, dfv_, offset)
             wnd[['PostCount_before', 'PostCount_on', 'PostCount_after']].boxplot(ax=ax[i][j])
             ax[i][j].set_xticklabels(['before', 'on', 'after'])
@@ -98,3 +105,4 @@ def event_plots(
         print('save figure')
     
     plt.savefig(output_filename, dpi=300)
+    spark.stop()
