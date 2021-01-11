@@ -1,0 +1,4 @@
+CREATE TABLE urls (url string unique, user int, downloaded bool, content string);
+CREATE INDEX url_index on urls(url);
+CREATE INDEX user_index on urls(user);
+CREATE INDEX downloaded_index on urls(downloaded);
